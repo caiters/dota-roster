@@ -1,96 +1,3 @@
-var guildWrapper = Vue.component("guild-stats", {
-  template: `<div>
-  <h2>Races</h2>
-  <ul>
-    <li>Humans {{numberOfRace(1)}}</li>
-    <li>Night Elves {{numberOfRace(4)}}</li>
-    <li>Gnomes {{numberOfRace(7)}}</li>
-  </ul>
-  </div>`,
-  props: ["guildies"],
-  data: function() {
-    return {
-      
-    };
-  },
-  created: function() {
-    
-  },
-  computed: {
-  },
-  methods: {
-    numberOfRace: function(raceId){
-      var membersOfRace = this.guildies.filter(function(member){
-        return member.character.race === raceId;
-      });
-      return membersOfRace.length;
-    }
-  }
-});
-
-var guildWrapper = Vue.component("guild-wrapper", {
-  template: `<div>
-  <p>Hello</p>
-  <h1>Guild Stats</h1>
-  <guild-stats :guildies="guildiesMaxLevel"></guild-stats>
-  <h1>List of Guild Members</h1>
-  <ul>
-    <li v-for="member in guildies10">
-      <img :src="'https://us.battle.net/static-render/us/' + member.character.thumbnail" :alt="member.character.name" />
-      <p>{{ member.character.name }}</p>
-      <p>{{getRaceName(member.character.race)}} {{getClassName(member.character.class)}}</p>
-    </li>
-  </ul>
-  </div>`,
-  //props: ["id", "category"],
-  data: function() {
-    return {
-      maxLevel: 110
-    };
-  },
-  created: function() {
-    
-  },
-  computed: {
-    guild: function(){
-      return this.$store.state.guild
-    },
-    races: function(){
-      return this.$store.state.races
-    },
-    classes: function(){
-      return this.$store.state.classes
-    },
-    guildiesMaxLevel: function (){
-      var app = this;
-      return (app.$store.state.guild.members || []).filter(function(member){
-        if(member.character.level >= app.maxLevel){
-          return member;
-        }
-      })
-    },
-    warriors: function(){
-      return (this.guildiesMaxLevel || []).filter(function(member){
-        if(member.character.class === 1){
-          return member;
-        }
-      });
-    },
-    /* temp to only load 10 people */
-    guildies10: function (){
-      return this.warriors.slice(0, 10)
-    }
-  },
-  methods: {
-    getRaceName: function(raceId) {
-      return this.races[raceId]
-    },
-    getClassName: function(classId) {
-      return this.classes[classId]
-    }
-  }
-});
-
 var get = function(path) {
   return fetch(path, { credentials: "same-origin" }).then(function(res) {
     return res.json();
@@ -102,6 +9,9 @@ var store = new Vuex.Store({
     guild: {},
     races: {},
     classes: {},
+    filters: {
+      level: 110
+    },
     loading: 0
   },
   mutations: {
@@ -137,6 +47,14 @@ var store = new Vuex.Store({
         classes[classObj.id] = classObj.name;
       });
       return Object.assign(state, { classes: classes });
+    },
+    setFilter: function(state, filterObj) {
+      let name = filterObj.filterName;
+      let filter = filterObj.filter;
+      return Vue.set(state.filters, name, filter);
+    },
+    removeFilter: function(state, filterObj) {
+      delete state.filters[filterObj.filterName];
     }
   },
   actions: {
@@ -157,6 +75,215 @@ var store = new Vuex.Store({
       return Promise.all([guildies, races, classes]).then(function() {
         context.commit("doneLoading");
       });
+    },
+    updateFilters: function(context, filterObj) {
+      if(filterObj.filter){
+        // if the filter itself is set to something, we add/update it
+        context.commit("setFilter", filterObj);
+      } else {
+        // if the filter is empty, we'll remove it from the filters
+        context.commit("removeFilter", filterObj);
+      }
+    }
+  }
+});
+
+var guildFilters = Vue.component("guild-filters", {
+  template: `<div class="filters">
+  <div class="input-group">
+    <label for="minimumLevelFilter">Enter Minimum member level to filter by</label>
+    <input id="minimumLevelFilter" name="minimumLevelFilter" type="number" v-model.number="filters.level" />
+  </div>
+  <div class="input-group">
+    <label for="raceFilter">Filter by Race</label>
+    <select id="raceFilter" name="raceFilter" v-model.number="filterBy.race" @change="updateFilters('race')">
+      <option></option>
+      <option v-for="(race, key) in races" :value="key">{{race}}</option>
+    </select>
+  </div>
+
+  <div class="input-group">
+    <label for="classFilter">Filter by Class</label>
+    <select id="classFilter" name="classFilter" v-model="filterBy.className" @change="updateFilters('className')">
+      <option></option>
+      <option v-for="className in classes" :value="className">{{className}}</option>
+    </select>
+  </div>
+</div>`,
+  //props: ["guildies", "levelLimit"],
+  data: function() {
+    return {
+      filterBy: {}
+    };
+  },
+  computed: {
+    filters() {
+      return this.$store.state.filters
+    },
+    races() {
+      return this.$store.state.races
+    },
+    classes() {
+      return this.$store.state.classes
+    }
+  },
+  methods: {
+    updateFilters(filterName){
+      var app = this;
+      this.$store.dispatch("updateFilters", {filterName, filter: app.filterBy[filterName]});
+    }
+  }
+});
+
+var guildWrapper = Vue.component("guild-stats", {
+  template: `<div>
+  <h2>{{totalMembers}} Members (at least level {{levelLimit}})</h2> 
+
+  <div v-if="guildies.length > 0">
+    <h2>Races</h2>
+    <ul>
+      <li v-for="(race, key) in races" v-show="numberOfRace(key) > 0">
+        {{race}} {{numberOfRace(key)}}
+      </li>
+    </ul>
+
+    <h2>Classes</h2>
+    <ul>
+      <li v-for="(characterClass, key) in classes" v-show="numberOfClass(key) > 0">
+        {{ characterClass }} {{numberOfClass(key)}}
+      </li>
+    </ul>
+  </div>
+  </div>`,
+  props: ["guildies", "levelLimit"],
+  data: function() {
+    return {
+      
+    };
+  },
+  created: function() {
+    
+  },
+  computed: {
+    races() {
+      return this.$store.state.races
+    },
+    classes() {
+      return this.$store.state.classes
+    },
+    totalMembers() {
+      return this.guildies.length
+    }
+  },
+  methods: {
+    numberOfRace(raceId) {
+      var membersOfRace = this.guildies.filter(function(member){
+        return member.character.race.toString() === raceId;
+      });
+      return membersOfRace.length;
+    },
+    numberOfClass(classId) {
+      var membersOfClass = this.guildies.filter(function(member){
+        return member.character.class === classId;
+      });
+      return membersOfClass.length;
+    }
+  }
+});
+
+var guildWrapper = Vue.component("guild-wrapper", {
+  template: `<div>
+  <h1>Guild Stats</h1>
+  <guild-filters></guild-filters>
+
+  {{filters}}
+
+  <guild-stats :guildies="filteredGuildies" :levelLimit="filters.level"></guild-stats>
+  <h1>List of Guild Members</h1>
+  <ul>
+    <li v-for="member in guildies10">
+      <img :src="'https://us.battle.net/static-render/us/' + member.character.thumbnail" :alt="member.character.name" />
+      <p>{{ member.character.name }}</p>
+      <p>Level {{member.character.level}} {{getRaceName(member.character.race)}} {{getClassName(member.character.class)}}</p>
+    </li>
+  </ul>
+  </div>`,
+  //props: ["id", "category"],
+  data: function() {
+    return {
+      
+    };
+  },
+  created: function() {
+    
+  },
+  computed: {
+    guild: function(){
+      return this.$store.state.guild
+    },
+    races: function(){
+      return this.$store.state.races
+    },
+    classes: function(){
+      return this.$store.state.classes
+    },
+    filters: function(){
+      return this.$store.state.filters
+    },
+    filteredGuildies: function (){
+      return this.filterGuildies()
+    },
+    /* temp to only load 10 people */
+    guildies10: function (){
+      return this.filteredGuildies.slice(0, 10)
+    }
+  },
+  methods: {
+    getRaceName: function(raceId) {
+      return this.races[raceId]
+    },
+    getClassName: function(classId) {
+      return this.classes[classId]
+    },
+    filterGuildies: function(){
+      console.log('=========');
+      console.log('filtering');
+      console.log('=========');
+
+      const app = this;
+
+      let members = app.$store.state.guild.members || [];
+
+      function filterMember(member) {
+        let returnMember;
+        let filtersArray = Object.keys(app.filters);
+
+        for(let i = 0; i < filtersArray.length; i++){
+          if(typeof(app.filters[filtersArray[i]]) === 'string' || (typeof(app.filters[filtersArray[i]] === 'number') && filtersArray[i] !== 'level')) {
+            if(member.character[filtersArray[i]] === app.filters[filtersArray[i]]) {
+              returnMember = member;
+            } else {
+              returnMember = undefined;
+              break;
+            }
+          } else if( typeof(app.filters[filtersArray[i]] === 'number') && filtersArray[i] === 'level'){
+            if(member.character[filtersArray[i]] >= app.filters[filtersArray[i]]) {
+              returnMember = member;     
+            } else {
+              returnMember = undefined;
+              break;
+            }
+          }
+        }
+        
+        return returnMember;
+      }
+      
+      let filtered = members.reduce(function(filteredMembers, member) {
+        let filteredMember = filterMember(member);
+        return typeof(filteredMember) === "undefined" ? filteredMembers : filteredMembers.concat(filteredMember);
+      }, []);
+      return filtered;
     }
   }
 });

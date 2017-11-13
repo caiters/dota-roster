@@ -9,6 +9,9 @@ var store = new Vuex.Store({
     guild: {},
     races: {},
     classes: {},
+    filters: {
+      level: 110
+    },
     loading: 0
   },
   mutations: {
@@ -44,6 +47,14 @@ var store = new Vuex.Store({
         classes[classObj.id] = classObj.name;
       });
       return Object.assign(state, { classes: classes });
+    },
+    setFilter: function(state, filterObj) {
+      let name = filterObj.filterName;
+      let filter = filterObj.filter;
+      return Vue.set(state.filters, name, filter);
+    },
+    removeFilter: function(state, filterObj) {
+      delete state.filters[filterObj.filterName];
     }
   },
   actions: {
@@ -64,6 +75,15 @@ var store = new Vuex.Store({
       return Promise.all([guildies, races, classes]).then(function() {
         context.commit("doneLoading");
       });
+    },
+    updateFilters: function(context, filterObj) {
+      if(filterObj.filter){
+        // if the filter itself is set to something, we add/update it
+        context.commit("setFilter", filterObj);
+      } else {
+        // if the filter is empty, we'll remove it from the filters
+        context.commit("removeFilter", filterObj);
+      }
     }
   }
 });
