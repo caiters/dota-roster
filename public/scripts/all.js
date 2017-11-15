@@ -1,93 +1,3 @@
-var get = function(path) {
-  return fetch(path, { credentials: "same-origin" }).then(function(res) {
-    return res.json();
-  });
-};
-
-var store = new Vuex.Store({
-  state: {
-    guild: {},
-    races: {},
-    classes: {},
-    filters: {
-      level: 110
-    },
-    loading: 0
-  },
-  mutations: {
-    loading: function(state) {
-      return Object.assign(state, { loading: state.loading + 1 });
-    },
-    doneLoading: function(state) {
-      return Object.assign(state, { loading: Math.max(0, state.loading - 1) });
-    },
-    setGuildMembers: function(state, data) {
-      return Object.assign(state, { guild: data });
-    },
-    setRaces: function(state, data){
-      let allianceRaces = {};
-
-      // get only races marked as alliance
-      let allianceRaceArray = data.races.filter(function(race){
-        return race.side === "alliance";
-      });
-
-      // update allianceRaces object with each alliance race in the format we want
-      allianceRaceArray.forEach(function(race){
-        allianceRaces[race.id] = race.name;
-      });
-      
-      return Object.assign(state, { races: allianceRaces });
-    },
-    setClasses: function(state, data){
-      let classes = {};
-      
-      // update classes object with each class in the format we want
-      data.classes.forEach(function(classObj){
-        classes[classObj.id] = classObj.name;
-      });
-      return Object.assign(state, { classes: classes });
-    },
-    setFilter: function(state, filterObj) {
-      let name = filterObj.filterName;
-      let filter = filterObj.filter;
-      return Vue.set(state.filters, name, filter);
-    },
-    removeFilter: function(state, filterObj) {
-      delete state.filters[filterObj.filterName];
-    }
-  },
-  actions: {
-    load: function(context) {
-      context.commit("loading");
-      let guildies = get("https://us.api.battle.net/wow/guild/Bronzebeard/Daughters%20OfThe%20Alliance?fields=members&locale=en_US&apikey=cb6fsvp6pvf5h7hz9sw2th4p9aax4ywp")
-        .then(function(guildies) {
-          context.commit("setGuildMembers", guildies);
-        });
-      let races = get("https://us.api.battle.net/wow/data/character/races?locale=en_US&apikey=cb6fsvp6pvf5h7hz9sw2th4p9aax4ywp")
-        .then(function(races){
-          context.commit("setRaces", races);
-        });
-      let classes = get("https://us.api.battle.net/wow/data/character/classes?locale=en_US&apikey=cb6fsvp6pvf5h7hz9sw2th4p9aax4ywp")
-        .then(function(classes){
-          context.commit("setClasses", classes);
-        });
-      return Promise.all([guildies, races, classes]).then(function() {
-        context.commit("doneLoading");
-      });
-    },
-    updateFilters: function(context, filterObj) {
-      if(filterObj.filter){
-        // if the filter itself is set to something, we add/update it
-        context.commit("setFilter", filterObj);
-      } else {
-        // if the filter is empty, we'll remove it from the filters
-        context.commit("removeFilter", filterObj);
-      }
-    }
-  }
-});
-
 var guildFilters = Vue.component("guild-filters", {
   template: `<div class="filters">
   <div class="input-group">
@@ -104,9 +14,9 @@ var guildFilters = Vue.component("guild-filters", {
 
   <div class="input-group">
     <label for="classFilter">Filter by Class</label>
-    <select id="classFilter" name="classFilter" v-model="filterBy.className" @change="updateFilters('className')">
+    <select id="classFilter" name="classFilter" v-model.number="filterBy.classId" @change="updateFilters('classId')">
       <option></option>
-      <option v-for="className in classes" :value="className">{{className}}</option>
+      <option v-for="(classId, key) in classes" :value="key">{{classId}}</option>
     </select>
   </div>
 </div>`,
@@ -196,13 +106,11 @@ var guildWrapper = Vue.component("guild-wrapper", {
   <h1>Guild Stats</h1>
   <guild-filters></guild-filters>
 
-  {{filters}}
-
   <guild-stats :guildies="filteredGuildies" :levelLimit="filters.level"></guild-stats>
   <h1>List of Guild Members</h1>
   <ul>
     <li v-for="member in guildies10">
-      <img :src="'https://us.battle.net/static-render/us/' + member.character.thumbnail" :alt="member.character.name" />
+      <img :src="'https://us.battle.net/static-render/us/' + member.character.thumbnail" v-on:error="replaceImage($event)" alt="" />
       <p>{{ member.character.name }}</p>
       <p>Level {{member.character.level}} {{getRaceName(member.character.race)}} {{getClassName(member.character.class)}}</p>
     </li>
@@ -239,6 +147,10 @@ var guildWrapper = Vue.component("guild-wrapper", {
     }
   },
   methods: {
+    replaceImage: function(event) {
+      // if the image returns a 404 we'll replace it with a placeholder
+      event.target.src = "http://www.placeunicorn.com/84x84";
+    },
     getRaceName: function(raceId) {
       return this.races[raceId]
     },
@@ -246,10 +158,6 @@ var guildWrapper = Vue.component("guild-wrapper", {
       return this.classes[classId]
     },
     filterGuildies: function(){
-      console.log('=========');
-      console.log('filtering');
-      console.log('=========');
-
       const app = this;
 
       let members = app.$store.state.guild.members || [];
@@ -260,12 +168,23 @@ var guildWrapper = Vue.component("guild-wrapper", {
 
         for(let i = 0; i < filtersArray.length; i++){
           if(typeof(app.filters[filtersArray[i]]) === 'string' || (typeof(app.filters[filtersArray[i]] === 'number') && filtersArray[i] !== 'level')) {
-            if(member.character[filtersArray[i]] === app.filters[filtersArray[i]]) {
-              returnMember = member;
-            } else {
-              returnMember = undefined;
-              break;
+            // because classId !== class, we have to do this special check...
+            if(filtersArray[i] === 'classId') {
+              if(member.character['class'] === app.filters[filtersArray[i]]) {
+                returnMember = member;
+              } else {
+                returnMember = undefined;
+                break;
+              }
+            } else { // not class
+              if(member.character[filtersArray[i]] === app.filters[filtersArray[i]]) {
+                returnMember = member;
+              } else {
+                returnMember = undefined;
+                break;
+              }
             }
+            // level
           } else if( typeof(app.filters[filtersArray[i]] === 'number') && filtersArray[i] === 'level'){
             if(member.character[filtersArray[i]] >= app.filters[filtersArray[i]]) {
               returnMember = member;     
@@ -284,6 +203,96 @@ var guildWrapper = Vue.component("guild-wrapper", {
         return typeof(filteredMember) === "undefined" ? filteredMembers : filteredMembers.concat(filteredMember);
       }, []);
       return filtered;
+    }
+  }
+});
+
+var get = function(path) {
+  return fetch(path, { credentials: "same-origin" }).then(function(res) {
+    return res.json();
+  });
+};
+
+var store = new Vuex.Store({
+  state: {
+    guild: {},
+    races: {},
+    classes: {},
+    filters: {
+      level: 110
+    },
+    loading: 0
+  },
+  mutations: {
+    loading: function(state) {
+      return Object.assign(state, { loading: state.loading + 1 });
+    },
+    doneLoading: function(state) {
+      return Object.assign(state, { loading: Math.max(0, state.loading - 1) });
+    },
+    setGuildMembers: function(state, data) {
+      return Object.assign(state, { guild: data });
+    },
+    setRaces: function(state, data){
+      let allianceRaces = {};
+
+      // get only races marked as alliance
+      let allianceRaceArray = data.races.filter(function(race){
+        return race.side === "alliance";
+      });
+
+      // update allianceRaces object with each alliance race in the format we want
+      allianceRaceArray.forEach(function(race){
+        allianceRaces[race.id] = race.name;
+      });
+      
+      return Object.assign(state, { races: allianceRaces });
+    },
+    setClasses: function(state, data){
+      let classes = {};
+      
+      // update classes object with each class in the format we want
+      data.classes.forEach(function(classObj){
+        classes[classObj.id] = classObj.name;
+      });
+      return Object.assign(state, { classes: classes });
+    },
+    setFilter: function(state, filterObj) {
+      let name = filterObj.filterName;
+      let filter = filterObj.filter;
+      return Vue.set(state.filters, name, filter);
+    },
+    removeFilter: function(state, filterObj) {
+      return Vue.delete(state.filters, filterObj.filterName);
+    }
+  },
+  actions: {
+    load: function(context) {
+      context.commit("loading");
+      let guildies = get("https://us.api.battle.net/wow/guild/Bronzebeard/Daughters%20OfThe%20Alliance?fields=members&locale=en_US&apikey=cb6fsvp6pvf5h7hz9sw2th4p9aax4ywp")
+        .then(function(guildies) {
+          context.commit("setGuildMembers", guildies);
+        });
+      let races = get("https://us.api.battle.net/wow/data/character/races?locale=en_US&apikey=cb6fsvp6pvf5h7hz9sw2th4p9aax4ywp")
+        .then(function(races){
+          context.commit("setRaces", races);
+        });
+      let classes = get("https://us.api.battle.net/wow/data/character/classes?locale=en_US&apikey=cb6fsvp6pvf5h7hz9sw2th4p9aax4ywp")
+        .then(function(classes){
+          context.commit("setClasses", classes);
+        });
+      return Promise.all([guildies, races, classes]).then(function() {
+        context.commit("doneLoading");
+      });
+    },
+    updateFilters: function(context, filterObj) {
+      if(filterObj.filter){
+        // if the filter itself is set to something, we add/update it
+        context.commit("setFilter", filterObj);
+      } else {
+        // if the filter is empty, we'll remove it from the filters
+        context.commit("removeFilter", filterObj);
+      }
     }
   }
 });

@@ -14,9 +14,9 @@ var guildFilters = Vue.component("guild-filters", {
 
   <div class="input-group">
     <label for="classFilter">Filter by Class</label>
-    <select id="classFilter" name="classFilter" v-model="filterBy.className" @change="updateFilters('className')">
+    <select id="classFilter" name="classFilter" v-model.number="filterBy.classId" @change="updateFilters('classId')">
       <option></option>
-      <option v-for="className in classes" :value="className">{{className}}</option>
+      <option v-for="(classId, key) in classes" :value="key">{{classId}}</option>
     </select>
   </div>
 </div>`,

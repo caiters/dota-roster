@@ -54,7 +54,7 @@ var store = new Vuex.Store({
       return Vue.set(state.filters, name, filter);
     },
     removeFilter: function(state, filterObj) {
-      delete state.filters[filterObj.filterName];
+      return Vue.delete(state.filters, filterObj.filterName);
     }
   },
   actions: {
