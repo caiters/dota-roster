@@ -11,7 +11,11 @@ var guildFilters = Vue.component("guild-filters", {
       <option v-for="(race, key) in races" :value="key">{{race}}</option>
     </select>
   </div>
-
+  <div v-if="urlParams">
+    <ul>
+      <li v-for="(urlParam, key) in urlParams">{{key}}: {{urlParam}}</li>
+    </ul>
+  </div>
   <div class="input-group">
     <label for="classFilter">Filter by Class</label>
     <select id="classFilter" name="classFilter" v-model.number="filterBy.classId" @change="updateFilters('classId')">
@@ -20,10 +24,16 @@ var guildFilters = Vue.component("guild-filters", {
     </select>
   </div>
 </div>`,
+  created: function(){
+    if(this.$route.query){
+      this.urlParams = this.$route.query;
+    }
+  },
   //props: ["guildies", "levelLimit"],
   data: function() {
     return {
-      filterBy: {}
+      filterBy: {},
+      urlParams: {}
     };
   },
   computed: {

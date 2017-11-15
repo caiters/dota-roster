@@ -20,6 +20,8 @@ var guildWrapper = Vue.component("guild-wrapper", {
     };
   },
   created: function() {
+  },
+  mounted: function(){
     
   },
   computed: {
