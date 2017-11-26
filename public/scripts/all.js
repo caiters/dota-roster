@@ -25,11 +25,17 @@ var guildFilters = Vue.component("guild-filters", {
   </div>
 </div>`,
   created: function(){
-    if(this.$route.query){
-      this.urlParams = this.$route.query;
+    var app = this;
+    console.log(this.$route.query)
+    if(app.$route.query){
+      app.urlParams = app.$route.query;
+      if(app.urlParams.rank){
+        app.filterBy.rank = app.urlParams.rank;
+        app.updateFilters('rank');
+      }
+      
     }
   },
-  //props: ["guildies", "levelLimit"],
   data: function() {
     return {
       filterBy: {},
@@ -218,8 +224,16 @@ var guildWrapper = Vue.component("guild-wrapper", {
 
         for(let i = 0; i < filtersArray.length; i++){
           if(typeof(app.filters[filtersArray[i]]) === 'string' || (typeof(app.filters[filtersArray[i]] === 'number') && filtersArray[i] !== 'level')) {
-            // because classId !== class, we have to do this special check...
-            if(filtersArray[i] === 'classId') {
+            // rank is the only top level filter so treat it separately
+            if(filtersArray[i] === 'rank') {
+              if(member[filtersArray[i]] === Number(app.filters[filtersArray[i]])) {
+                returnMember = member;
+              } else {
+                returnMember = undefined;
+                break;
+              }
+            } else if(filtersArray[i] === 'classId') {
+              // because classId !== class, we have to do this special check...
               if(member.character['class'] === app.filters[filtersArray[i]]) {
                 returnMember = member;
               } else {

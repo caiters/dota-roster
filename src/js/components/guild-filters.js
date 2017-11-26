@@ -25,11 +25,17 @@ var guildFilters = Vue.component("guild-filters", {
   </div>
 </div>`,
   created: function(){
-    if(this.$route.query){
-      this.urlParams = this.$route.query;
+    var app = this;
+    console.log(this.$route.query)
+    if(app.$route.query){
+      app.urlParams = app.$route.query;
+      if(app.urlParams.rank){
+        app.filterBy.rank = app.urlParams.rank;
+        app.updateFilters('rank');
+      }
+      
     }
   },
-  //props: ["guildies", "levelLimit"],
   data: function() {
     return {
       filterBy: {},

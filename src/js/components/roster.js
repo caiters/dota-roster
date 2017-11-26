@@ -105,8 +105,16 @@ var guildWrapper = Vue.component("guild-wrapper", {
 
         for(let i = 0; i < filtersArray.length; i++){
           if(typeof(app.filters[filtersArray[i]]) === 'string' || (typeof(app.filters[filtersArray[i]] === 'number') && filtersArray[i] !== 'level')) {
-            // because classId !== class, we have to do this special check...
-            if(filtersArray[i] === 'classId') {
+            // rank is the only top level filter so treat it separately
+            if(filtersArray[i] === 'rank') {
+              if(member[filtersArray[i]] === Number(app.filters[filtersArray[i]])) {
+                returnMember = member;
+              } else {
+                returnMember = undefined;
+                break;
+              }
+            } else if(filtersArray[i] === 'classId') {
+              // because classId !== class, we have to do this special check...
               if(member.character['class'] === app.filters[filtersArray[i]]) {
                 returnMember = member;
               } else {
