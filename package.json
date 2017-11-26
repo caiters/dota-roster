@@ -5,13 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
+    "start": "concurrent \"node index.js\" \"gulp\"",
     "build": "gulp",
     "postinstall": "gulp build"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "concurrently": "^3.5.1",
     "express": "^4.15.3",
     "gulp": "^3.9.1",
     "gulp-autoprefixer": "^4.0.0",
