@@ -7,7 +7,7 @@ var gulp = require("gulp"),
   connect = require("gulp-connect");
 
 var paths = {
-  cssSrc: "src/scss/nikki.scss",
+  cssSrc: "src/scss/dota.scss",
   cssParts: "src/scss/*/**",
   cssDest: "public/css/",
   jsDest: "public/scripts/",
