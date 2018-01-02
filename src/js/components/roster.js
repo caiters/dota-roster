@@ -1,10 +1,10 @@
 var guildWrapper = Vue.component("guild-wrapper", {
   template: `<div>
   <h1>Guild Stats</h1>
-  <guild-filters></guild-filters>
+  <guild-filters :rank="rank"></guild-filters>
 
   <guild-stats :guildies="filteredGuildies" :levelLimit="filters.level"></guild-stats>
-  <h1>List of Guild Members</h1>
+  <h1>List of {{memberRank}}</h1>
   <div class="input-group">
   <label for="sortBy">Sort by...</label>
   <select name="sortBy" id="sortBy" v-model="sortBy" @change="sortGuildies()">
@@ -24,7 +24,7 @@ var guildWrapper = Vue.component("guild-wrapper", {
     </li>
   </ul>
   </div>`,
-  //props: ["id", "category"],
+  props: ["rank", "memberRankTitle"],
   data: function() {
     return {
       sortBy: 'level'
@@ -36,6 +36,16 @@ var guildWrapper = Vue.component("guild-wrapper", {
     
   },
   computed: {
+    memberRank: function(){
+      switch(this.rank) {
+        case '1,2,3':
+          return 'Officers';
+        case '4':
+          return 'Big Sisters';
+        default:
+          return 'Guild Members';
+      }
+    },
     guild: function(){
       return this.$store.state.guild
     },
@@ -85,7 +95,6 @@ var guildWrapper = Vue.component("guild-wrapper", {
           }
           return 0;
         }
-        // sort alphabetical
       })
     },
     getRaceName: function(raceId) {
@@ -107,7 +116,8 @@ var guildWrapper = Vue.component("guild-wrapper", {
           if(typeof(app.filters[filtersArray[i]]) === 'string' || (typeof(app.filters[filtersArray[i]] === 'number') && filtersArray[i] !== 'level')) {
             // rank is the only top level filter so treat it separately
             if(filtersArray[i] === 'rank') {
-              if(member[filtersArray[i]] === Number(app.filters[filtersArray[i]])) {
+              let ranks = app.filters[filtersArray[i]].split(',');
+              if (ranks.indexOf(member[filtersArray[i]].toString()) > -1) {
                 returnMember = member;
               } else {
                 returnMember = undefined;

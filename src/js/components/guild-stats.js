@@ -47,7 +47,7 @@ var guildWrapper = Vue.component("guild-stats", {
     },
     numberOfClass(classId) {
       var membersOfClass = this.guildies.filter(function(member){
-        return member.character.class === classId;
+        return member.character.class.toString() === classId;
       });
       return membersOfClass.length;
     }

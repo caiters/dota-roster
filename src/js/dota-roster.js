@@ -1,5 +1,5 @@
 var routes = [
-  { path: "/", component: guildWrapper }
+  { path: "/", component: guildWrapper, props: (route) => ({ rank: route.query.rank || '' }) }
 ];
 
 var router = new VueRouter({
