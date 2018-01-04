@@ -122,7 +122,7 @@ var guildWrapper = Vue.component("guild-wrapper", {
   <div class="input-group">
   <label for="sortBy">Sort by...</label>
   <select name="sortBy" id="sortBy" v-model="sortBy" @change="sortGuildies()">
-    <option value="level" selected>By Level</option>
+    <option value="level" selected>Level</option>
     <option value="alphabetical">Alphabetical</option>
   </select>
   </div>
